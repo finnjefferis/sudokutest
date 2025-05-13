@@ -17,13 +17,14 @@ export default function App() {
   }, [dark])
 
   /* board state */
-  const [initial, setInitial]       = useState<Board | null>(null)
-  const [board,   setBoard]         = useState<Board | null>(null)
-  const [selected, setSelected]     = useState<Pos>(null)
-  const [conflicts, setConflicts]   = useState<Set<string>>(new Set())
-  const [loading,   setLoading]     = useState(true)
-  const [error,     setError]       = useState<string | null>(null)
-  const [diff,      setDiff]        = useState<Diff>('Easy')
+  const [initial,     setInitial]     = useState<Board | null>(null)
+  const [board,       setBoard]       = useState<Board | null>(null)
+  const [selected,    setSelected]    = useState<Pos>(null)
+  const [conflicts,   setConflicts]   = useState<Set<string>>(new Set())
+  const [loading,     setLoading]     = useState(true)
+  const [error,       setError]       = useState<string | null>(null)
+  const [diff,        setDiff]        = useState<Diff>('Easy')
+  const [hintOptions, setHintOptions] = useState<number[] | null>(null)
 
   /* timer */
   const [sec, setSec] = useState(0)
@@ -39,10 +40,10 @@ export default function App() {
   /* audio */
   const clickAudio   = useRef(new Audio(
     'https://freesound.org/data/previews/678/678248_5121236-lq.mp3'
-  )) /* :contentReference[oaicite:2]{index=2} */
+  ))
   const successAudio = useRef(new Audio(
     'https://freesound.org/data/previews/456/456968-lq.mp3'
-  )) /* :contentReference[oaicite:3]{index=3} */
+  ))
 
   /* undo/redo */
   const undo = useRef<Board[]>([])
@@ -56,9 +57,7 @@ export default function App() {
   const fetchPuzzle = useCallback(async (d: Diff) => {
     setLoading(true); setError(null)
     try {
-      const r = await fetch(
-        `https://sudoku-api.vercel.app/api/dosuku?difficulty=${d}`
-      )
+      const r = await fetch(`https://sudoku-api.vercel.app/api/dosuku?difficulty=${d}`)
       if (!r.ok) throw new Error(`HTTP ${r.status}`)
       const j: API = await r.json()
       const raw = j.newboard.grids[0].value
@@ -66,6 +65,7 @@ export default function App() {
       setInitial(pzl)
       setDiff('Easy')
       setBoard(pzl.map(r=>[...r]))
+      setHintOptions(null)        // clear hints on new puzzle
       undo.current = []; redo.current = []
       setSelected(null); setConflicts(new Set())
     } catch(e: any) {
@@ -93,10 +93,7 @@ export default function App() {
           if ((r!==i||c!==j)&&board[r][c]===v) s.add(`${i}-${j}`)
     }
     setConflicts(s)
-    if (
-      board.flat().every(x=>x!=null) &&
-      s.size===0
-    ) successAudio.current.play()
+    if (board.flat().every(x=>x!=null) && s.size===0) successAudio.current.play()
   }, [board])
 
   /* helpers */
@@ -104,12 +101,10 @@ export default function App() {
     if (!board||!initial) return
     pushHistory(board)
     clickAudio.current.play()
-    setBoard(b=>
-      b!.map((row,ri)=>ri===r
-        ? row.map((cell,ci)=>ci===c?v:cell)
-        : row
-      )
-    )
+    setBoard(b=>b!.map((row,ri)=>ri===r
+      ? row.map((cell,ci)=>ci===c?v:cell)
+      : row
+    ))
   }
   const legal = (r:number,c:number) => {
     if (!board) return [] as number[]
@@ -121,17 +116,17 @@ export default function App() {
     const br=Math.floor(r/3)*3, bc=Math.floor(c/3)*3
     for (let i=br;i<br+3;i++) for (let j=bc;j<bc+3;j++)
       board[i][j] && ban.add(board[i][j]!)
-    return Array.from({length:9},(_,i)=>i+1)
-      .filter(n=>!ban.has(n))
+    return Array.from({length:9},(_,i)=>i+1).filter(n=>!ban.has(n))
   }
   const hint = () => {
     if (!selected||!initial) return
-    const {r,c} = selected
+    const { r, c } = selected
     if (initial[r][c]!=null) return
-    const opts = legal(r,c)
-    if (opts.length===1) update(r,c,opts[0])
-    else alert(opts.length?'Multiple':'None')
+    const opts = legal(r, c)
+    if (opts.length===1) update(r, c, opts[0])
+    else setHintOptions(opts)
   }
+
   const reset    = () => initial && setBoard(initial.map(r=>[...r]))
   const undoMove = () => {
     if (undo.current.length && board){
@@ -140,7 +135,6 @@ export default function App() {
       clickAudio.current.play()
     }
   }
- 
 
   /* UI */
   if (loading) return <div className="app">Loading…</div>
@@ -155,44 +149,66 @@ export default function App() {
         <button onClick={hint}>💡</button>
         <button onClick={reset}>🔄</button>
         <button onClick={()=>fetchPuzzle(diff)}>🎲</button>
-        <button onClick={()=>setDark(d=>!d)}>🌙</button>
+        <button onClick={()=>{ setDark(d=>!d);  }}>🌙</button>
       </div>
       <div className="board">
-        {board.map((row,r)=>
-          row.map((cell,c)=>{
-            const k = `${r}-${c}`
-            const init = initial[r][c]!=null
-            const sel  = selected?.r===r&&selected?.c===c
-            const inR  = selected?.r===r
-            const inC  = selected?.c===c
-            const inB  = selected &&
-              Math.floor(selected.r/3)===Math.floor(r/3)&&
-              Math.floor(selected.c/3)===Math.floor(c/3)
-            const conf = conflicts.has(k)
-            const cls = [
-              'cell',
-              init    && 'initial',
-              sel     && 'selected',
-              (inR||inC||inB)&&!sel&&'related',
-              conf    && 'conflict'
-            ].filter(Boolean).join(' ')
-            return (
-              <div
-                key={k}
-                className={cls}
-                onClick={()=>!init&&(setSelected({r,c}),clickAudio.current.play())}
-              >{cell}</div>
-            )
-          })
-        )}
+        {board.map((row,r)=>row.map((cell,c)=>{
+          const key = `${r}-${c}`
+          const init = initial[r][c]!=null
+          const sel  = selected?.r===r && selected?.c===c
+          const inR  = selected?.r===r
+          const inC  = selected?.c===c
+          const inB  = selected &&
+                        Math.floor(selected.r/3)===Math.floor(r/3)&&
+                        Math.floor(selected.c/3)===Math.floor(c/3)
+          const conf = conflicts.has(key)
+          const cls = [
+            'cell',
+            init && 'initial',
+            sel  && 'selected',
+            (inR||inC||inB) && !sel && 'related',
+            conf && 'conflict'
+          ].filter(Boolean).join(' ')
+          return (
+            <div
+              key={key}
+              className={cls}
+              onClick={() => {
+                if (!init) {
+                  clickAudio.current.play()
+                  setSelected({r,c})
+                  setHintOptions(null)    // clear hint when selecting
+                }
+              }}
+            >
+              {cell}
+            </div>
+          )
+        }))}
       </div>
+
+      {hintOptions && (
+        <div className="hint-box">
+          <span>Possible values: </span>
+          <span className="hint-values">{hintOptions.join(' ')}</span>
+        </div>
+      )}
+
       <div className="numpad">
         {[1,2,3,4,5,6,7,8,9].map(n=>(
-          <button key={n} onClick={()=>selected&&update(selected.r,selected.c,n)}>
+          <button key={n} onClick={() => {
+            setHintOptions(null)        // clear hint after entry
+            selected && update(selected.r, selected.c, n)
+          }}>
             {n}
           </button>
         ))}
-        <button onClick={()=>selected&&update(selected.r,selected.c,null)}>X</button>
+        <button onClick={() => {
+          setHintOptions(null)
+          selected && update(selected.r, selected.c, null)
+        }}>
+          X
+        </button>
       </div>
     </div>
   )

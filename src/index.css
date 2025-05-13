@@ -2,7 +2,7 @@
 
 html,body,#root {
   height:100%; margin:0;
-  background:#fff; color:#111;
+  color:#111;
   font-family:'Figtree',sans-serif;
   display:flex; justify-content:center; align-items:center;
 }
@@ -74,4 +74,78 @@ html,body,#root {
   .numpad button:active {
     transform: scale(0.96);
   }
+  /* === DARK MODE === */
+.dark {
+    background: #111;
+    color: #f8f8f8;
+  }
   
+  .dark .app {
+    background: #111;
+    color: #f8f8f8;
+  }
+  
+  .dark .cell {
+    background: #222;
+    border-color: #444;
+    color: #f8f8f8;
+  }
+  
+  .dark .cell.related {
+    background: #2a2a2a;
+  }
+  
+  .dark .cell.selected {
+    outline: 2px solid #f8f8f8;
+  }
+  
+  .dark .cell.conflict {
+    background: #441111;
+    color: #ffb3b3;
+  }
+  
+  .dark .board {
+    background: #333;
+  }
+  
+  .dark .numpad button {
+    background: #222;
+    color: #f8f8f8;
+    border-color: #444;
+  }
+  
+  .dark .numpad button:hover {
+    background: #333;
+  }
+  
+  .dark .controls button {
+    color: #f8f8f8;
+  }
+  html, body {
+    transition: background .3s ease, color .3s ease;
+  }
+  
+  .hint-box {
+    width: 90%;
+
+    background: #f0f0f0;
+    color: #111;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+    font-size: 0.95rem;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    margin-top: 1rem;
+  }
+  
+  /* Dark mode hint box */
+  .dark .hint-box {
+    background: #222;
+    color: #f8f8f8;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  }
+  
+  .hint-values {
+    font-weight: 600;
+    letter-spacing: 0.05em;
+  }
