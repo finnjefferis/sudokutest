@@ -27,8 +27,9 @@ export default function App() {
   }, [dark])
 
   /* ---------- board state ---------- */
-  const initial = PUZZLES.easy[0]
-  const [board, setBoard] = useState<Board>(initial.map(r => [...r]))
+  const [initial] = PUZZLES.easy
+  const [board, setBoard] = useState<Board>(() => initial.map(r => [...r]))
+  
   const [selected, setSelected] = useState<Pos>(null)
   const [conflicts, setConflicts] = useState<Set<string>>(new Set())
 
