@@ -1,180 +1,163 @@
 @import url('https://fonts.googleapis.com/css2?family=Figtree:wght@400;600&display=swap');
 
-html,body,#root {
-  height:100%; margin:0;
-  color:#111;
-  font-family:'Figtree',sans-serif;
-  display:flex; justify-content:center; align-items:center;
+/* ─── Variables ───────────────────────────────────────────────────────── */
+:root {
+  --bg:       #fff;
+  --fg:       #111;
+  --board-bg: #0003;
+  --cell-bg:  #f8f8f8;
+  --cell-border: #ddd;
+  --cell-rel: #eee;
+  --cell-conf-bg: #fdd;
+  --cell-conf-color: #b91c1c;
+  --hint-bg:  #f0f0f0;
+  --hint-fg:  #111;
+  --numpad-bg: #f4f4f4;
+  --numpad-border: #ccc;
+}
+.dark {
+  --bg:       #111;
+  --fg:       #f8f8f8;
+  --board-bg: #333;
+  --cell-bg:  #222;
+  --cell-border: #444;
+  --cell-rel: #2a2a2a;
+  --cell-conf-bg: #441111;
+  --cell-conf-color: #ffb3b3;
+  --hint-bg:  #222;
+  --hint-fg:  #f8f8f8;
+  --numpad-bg: #222;
+  --numpad-border: #444;
 }
 
+/* ─── Global ─────────────────────────────────────────────────────────── */
+html, body, #root {
+  height: 100%; margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: 'Figtree', sans-serif;
+  display: flex; justify-content: center; align-items: center;
+  transition: background .3s ease, color .3s ease;
+}
+
+/* ─── App Container ─────────────────────────────────────────────────── */
 .app {
-  width:100%; max-width:400px;
-  padding:1rem; display:flex; flex-direction:column;
-  align-items:center; gap:1rem;
+  width: 100%; max-width: 400px;
+  padding: 1rem;
+  display: flex; flex-direction: column;
+  align-items: center; gap: 1rem;
 }
 
+/* ─── Timer ─────────────────────────────────────────────────────────── */
 .timer {
-  font-size:1rem; font-weight:600; letter-spacing:.05em;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: .05em;
 }
 
+/* ─── Controls ──────────────────────────────────────────────────────── */
 .controls {
-  display:flex; gap:.5rem; flex-wrap:wrap;
+  display: flex; gap: .5rem; flex-wrap: wrap;
 }
 .controls button {
-  background:none; border:none;
-  font-size:1.2rem; cursor:pointer;
-  transition:transform .1s;
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: transform .1s;
+  color: var(--fg);
 }
-.controls button:active { transform:scale(0.9); }
-.controls button:disabled { opacity:.3; cursor:default; }
+.controls button:active   { transform: scale(0.9); }
+.controls button:disabled { opacity: .3; cursor: default; }
 
+/* ─── Board ─────────────────────────────────────────────────────────── */
 .board {
-  display:grid;
-  grid-template-columns:repeat(9,1fr);
-  gap:2px; background:#0003;
-  padding:2px; width:100%; aspect-ratio:1;
-}
-.cell {
-  background:#f8f8f8; border:1px solid #ddd;
-  display:flex; align-items:center; justify-content:center;
-  user-select:none; font-size:1rem;
-  transition:background .2s, outline .2s;
-}
-.cell.initial  { opacity:.6; }
-.cell.selected { outline:2px solid #111; }
-.cell.related  { background:#eee; }
-.cell.conflict { background:#fdd; color:#b91c1c; }
-
-.numpad {
     display: grid;
-    grid-template-columns: repeat(5, minmax(40px, 1fr));
-    gap: .5rem;
-    justify-content: center;
-    margin-top: 1rem;
+    grid-template-columns: repeat(9, 1fr);
+    /* replace 2px borders with 1px gaps */
+    gap: 1px;            
+    padding: 1px;        /* outermost line */
+    background: var(--cell-border);
     width: 100%;
-    max-width: 320px;
+    aspect-ratio: 1;
   }
   
-  .numpad button {
-    background: #f4f4f4;
-    border: 1px solid #ccc;
-    border-radius: .5rem;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    font-size: 1rem;
-    font-weight: 600;
-    padding: .75rem 0;
-    cursor: pointer;
-    transition: background .2s ease, transform .1s ease;
-  }
+  .cell {
+    /* kill the old borders */
+    border: none;
+    background: var(--cell-bg);
+    /* any other styling… */
   
-  .numpad button:hover {
-    background: #eaeaea;
-  }
   
-  .numpad button:active {
-    transform: scale(0.96);
-  }
-  /* === DARK MODE === */
-.dark {
-    background: #111;
-    color: #f8f8f8;
-  }
-  
-  .dark .app {
-    background: #111;
-    color: #f8f8f8;
-  }
-  
-  .dark .cell {
-    background: #222;
-    border-color: #444;
-    color: #f8f8f8;
-  }
-  
-  .dark .cell.related {
-    background: #2a2a2a;
-  }
-  
-  .dark .cell.selected {
-    outline: 2px solid #f8f8f8;
-  }
-  
-  .dark .cell.conflict {
-    background: #441111;
-    color: #ffb3b3;
-  }
-  
-  .dark .board {
-    background: #333;
-  }
-  
-  .dark .numpad button {
-    background: #222;
-    color: #f8f8f8;
-    border-color: #444;
-  }
-  
-  .dark .numpad button:hover {
-    background: #333;
-  }
-  
-  .dark .controls button {
-    color: #f8f8f8;
-  }
-  html, body {
-    transition: background .3s ease, color .3s ease;
-  }
-  
-  .hint-box {
-    width: 90%;
+  display: flex; justify-content: center; align-items: center;
+  user-select: none;
+  font-size: 1rem;
+  transition: background .2s, outline .2s;
+  aspect-ratio: 1 / 1;
+}
+.cell.initial  { opacity: .6; }
+.cell.selected { outline: 2px solid var(--fg); }
+.cell.related  { background: var(--cell-rel); }
+.cell.conflict {
+  background: var(--cell-conf-bg);
+  color: var(--cell-conf-color);
+}
 
-    background: #f0f0f0;
-    color: #111;
-    padding: 0.75rem 1rem;
-    border-radius: 0.5rem;
-    font-size: 0.95rem;
-    text-align: center;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    margin-top: 1rem;
-  }
-  
-  /* Dark mode hint box */
-  .dark .hint-box {
-    background: #222;
-    color: #f8f8f8;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-  }
-  
-  .hint-values {
-    font-weight: 600;
-    letter-spacing: 0.05em;
-  }
+/* ─── Numpad ───────────────────────────────────────────────────────── */
+.numpad {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(40px, 1fr));
+  gap: .5rem;
+  justify-content: center;
+  margin-top: 1rem;
+  width: 100%; max-width: 320px;
+}
+.numpad button {
+  background: var(--numpad-bg);
+  border: 1px solid var(--numpad-border);
+  border-radius: .5rem;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  font-size: 1rem;
+  font-weight: 600;
+  padding: .75rem 0;
+  cursor: pointer;
+  transition: background .2s ease, transform .1s ease;
+  color: var(--fg);
+}
+.numpad button:hover  { background: lighten(var(--numpad-bg), 5%); }
+.numpad button:active { transform: scale(0.96); }
 
-  /* 1. Force true squares for every .cell */
-.cell {
-    aspect-ratio: 1 / 1;
-  }
-  
-  /* 2 & 3. Hint box: reserve height, fade in only when non-empty */
-  .hint-box {
-    width: 90%;
-    max-width: 400px;
-    min-height: 2rem;              /* reserve space so nothing jumps */
-    opacity: 0;
-    transform: translateY(-8px);
-    transition: opacity .3s ease, transform .3s ease;
-  }
-  
-  .hint-box:not(:empty) {
-    opacity: 1;
-    transform: translateY(0);
-  }
-  
+/* ─── Hint Box ──────────────────────────────────────────────────────── */
+.hint-box {
+  width: 90%; max-width: 400px;
 
-  @media (max-width: 420px) {
-    .app {
-      transform: scale(0.95);
-      transform-origin: top center;
-    }
+  background: var(--hint-bg);
+  color: var(--hint-fg);
+  padding: .75rem 1rem;
+  border-radius: .5rem;
+  font-size: .95rem;
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  margin-top: 1rem;
+  opacity: 0;
+  transform: translateY(-8px);
+  transition: opacity .3s ease, transform .3s ease;
+}
+.hint-box:not(:empty) {
+  opacity: 1;
+  transform: translateY(0);
+}
+.hint-values {
+  font-weight: 600;
+  letter-spacing: .05em;
+}
+
+/* ─── Mobile Shrink ─────────────────────────────────────────────────── */
+@media (max-width: 420px) {
+  .app {
+    transform: scale(0.94);
+    transform-origin: top center;
   }
-  
+}
+
+
