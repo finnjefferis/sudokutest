@@ -149,3 +149,32 @@ html,body,#root {
     font-weight: 600;
     letter-spacing: 0.05em;
   }
+
+  /* 1. Force true squares for every .cell */
+.cell {
+    aspect-ratio: 1 / 1;
+  }
+  
+  /* 2 & 3. Hint box: reserve height, fade in only when non-empty */
+  .hint-box {
+    width: 90%;
+    max-width: 400px;
+    min-height: 2rem;              /* reserve space so nothing jumps */
+    opacity: 0;
+    transform: translateY(-8px);
+    transition: opacity .3s ease, transform .3s ease;
+  }
+  
+  .hint-box:not(:empty) {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  
+
+  @media (max-width: 420px) {
+    .app {
+      transform: scale(0.95);
+      transform-origin: top center;
+    }
+  }
+  
