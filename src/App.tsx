@@ -64,6 +64,7 @@ export default function App() {
       const raw = j.newboard.grids[0].value
       const pzl = raw.map(r=>r.map(v=>v===0?null:v))
       setInitial(pzl)
+      setDiff('Easy')
       setBoard(pzl.map(r=>[...r]))
       undo.current = []; redo.current = []
       setSelected(null); setConflicts(new Set())
@@ -139,13 +140,7 @@ export default function App() {
       clickAudio.current.play()
     }
   }
-  const redoMove = () => {
-    if (redo.current.length && board){
-      undo.current.push(board)
-      setBoard(redo.current.pop()!)
-      clickAudio.current.play()
-    }
-  }
+ 
 
   /* UI */
   if (loading) return <div className="app">Loading…</div>
