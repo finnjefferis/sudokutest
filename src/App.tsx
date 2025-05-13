@@ -1,191 +1,203 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 
-type Cell = number | null
+type Cell  = number | null
 type Board = Cell[][]
-type Pos = { r: number; c: number } | null
-
-interface SudokuApiResponse {
-  newboard: {
-    grids: {
-      value: number[][]
-      solution: number[][]
-      difficulty: string
-    }[]
-  }
-}
-
-const STORAGE_DARK = 'sudoku-dark'
+type Pos   = { r: number; c: number } | null
+type Diff  = 'Easy' | 'Medium' | 'Hard'
+interface API { newboard: { grids: { value: number[][] }[] } }
 
 export default function App() {
-  // Dark mode
-  const [dark, setDark] = useState<boolean>(() => {
-    const saved = localStorage.getItem(STORAGE_DARK)
-    return saved ? JSON.parse(saved) : false
-  })
+  /* dark-mode */
+  const [dark, setDark] = useState<boolean>(
+    () => JSON.parse(localStorage.getItem('sudoku-dark') || 'false')
+  )
   useEffect(() => {
     document.documentElement.classList.toggle('dark', dark)
-    localStorage.setItem(STORAGE_DARK, JSON.stringify(dark))
+    localStorage.setItem('sudoku-dark', JSON.stringify(dark))
   }, [dark])
 
-  // Board state
-  const [initial, setInitial] = useState<Board | null>(null)
-  const [board, setBoard]     = useState<Board | null>(null)
-  const [selected, setSelected] = useState<Pos>(null)
-  const [conflicts, setConflicts] = useState<Set<string>>(new Set())
-  const [loading, setLoading] = useState(true)
-  const [error, setError]     = useState<string | null>(null)
+  /* board state */
+  const [initial, setInitial]       = useState<Board | null>(null)
+  const [board,   setBoard]         = useState<Board | null>(null)
+  const [selected, setSelected]     = useState<Pos>(null)
+  const [conflicts, setConflicts]   = useState<Set<string>>(new Set())
+  const [loading,   setLoading]     = useState(true)
+  const [error,     setError]       = useState<string | null>(null)
+  const [diff,      setDiff]        = useState<Diff>('Easy')
 
-  // Fetch puzzle
-  const fetchPuzzle = useCallback(async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const res = await fetch('https://sudoku-api.vercel.app/api/dosuku')
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const data: SudokuApiResponse = await res.json()
-      const raw = data.newboard.grids[0].value
-      const puzzle: Board = raw.map(row => row.map(v => (v === 0 ? null : v)))
-      setInitial(puzzle)
-      setBoard(puzzle.map(r => [...r]))
-    } catch (e: any) {
-      setError(e.message || 'Error fetching puzzle')
-    } finally {
-      setLoading(false)
-      setSelected(null)
-      setConflicts(new Set())
-    }
-  }, [])
-
-  useEffect(() => {
-    fetchPuzzle()
-  }, [fetchPuzzle])
-
-  // Conflict detection
+  /* timer */
+  const [sec, setSec] = useState(0)
   useEffect(() => {
     if (!board) return
-    const cset = new Set<string>()
-    for (let i = 0; i < 9; i++) {
-      for (let j = 0; j < 9; j++) {
-        const v = board[i][j]
-        if (!v) continue
-        // row & col
-        for (let k = 0; k < 9; k++) {
-          if (k !== j && board[i][k] === v) cset.add(`${i}-${j}`)
-          if (k !== i && board[k][j] === v) cset.add(`${i}-${j}`)
-        }
-        // box
-        const br = Math.floor(i / 3) * 3
-        const bc = Math.floor(j / 3) * 3
-        for (let r = br; r < br + 3; r++) {
-          for (let c = bc; c < bc + 3; c++) {
-            if ((r !== i || c !== j) && board[r][c] === v) {
-              cset.add(`${i}-${j}`)
-            }
-          }
-        }
-      }
-    }
-    setConflicts(cset)
+    setSec(0)
+    const id = setInterval(() => setSec(s => s + 1), 1000)
+    return () => clearInterval(id)
   }, [board])
+  const fmt = (s: number) =>
+    `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`
 
-  const updateCell = useCallback((r: number, c: number, v: Cell) => {
-    setBoard(prev =>
-      prev
-        ? prev.map((row, ri) =>
-            ri === r ? row.map((cell, ci) => (ci === c ? v : cell)) : row
-          )
-        : null
-    )
-  }, [])
+  /* audio */
+  const clickAudio   = useRef(new Audio(
+    'https://freesound.org/data/previews/678/678248_5121236-lq.mp3'
+  )) /* :contentReference[oaicite:2]{index=2} */
+  const successAudio = useRef(new Audio(
+    'https://freesound.org/data/previews/456/456968-lq.mp3'
+  )) /* :contentReference[oaicite:3]{index=3} */
 
-  const handleNumberClick = (n: Cell) => {
-    if (!selected || !initial || !board) return
-    const { r, c } = selected
-    if (initial[r][c] == null) updateCell(r, c, n)
+  /* undo/redo */
+  const undo = useRef<Board[]>([])
+  const redo = useRef<Board[]>([])
+  const pushHistory = (b: Board) => {
+    undo.current.push(b.map(r=>[...r]))
+    redo.current = []
   }
 
+  /* fetch puzzle */
+  const fetchPuzzle = useCallback(async (d: Diff) => {
+    setLoading(true); setError(null)
+    try {
+      const r = await fetch(
+        `https://sudoku-api.vercel.app/api/dosuku?difficulty=${d}`
+      )
+      if (!r.ok) throw new Error(`HTTP ${r.status}`)
+      const j: API = await r.json()
+      const raw = j.newboard.grids[0].value
+      const pzl = raw.map(r=>r.map(v=>v===0?null:v))
+      setInitial(pzl)
+      setBoard(pzl.map(r=>[...r]))
+      undo.current = []; redo.current = []
+      setSelected(null); setConflicts(new Set())
+    } catch(e: any) {
+      setError(e.message||'Fetch failed')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => { fetchPuzzle(diff) }, [diff, fetchPuzzle])
+
+  /* conflict + win */
+  useEffect(() => {
+    if (!board) return
+    const s = new Set<string>()
+    for (let i=0;i<9;i++) for (let j=0;j<9;j++){
+      const v = board[i][j]; if (!v) continue
+      for (let k=0;k<9;k++){
+        if (k!==j && board[i][k]===v) s.add(`${i}-${j}`)
+        if (k!==i && board[k][j]===v) s.add(`${i}-${j}`)
+      }
+      const br=Math.floor(i/3)*3, bc=Math.floor(j/3)*3
+      for (let r=br;r<br+3;r++)
+        for (let c=bc;c<bc+3;c++)
+          if ((r!==i||c!==j)&&board[r][c]===v) s.add(`${i}-${j}`)
+    }
+    setConflicts(s)
+    if (
+      board.flat().every(x=>x!=null) &&
+      s.size===0
+    ) successAudio.current.play()
+  }, [board])
+
+  /* helpers */
+  const update = (r:number,c:number,v:Cell) => {
+    if (!board||!initial) return
+    pushHistory(board)
+    clickAudio.current.play()
+    setBoard(b=>
+      b!.map((row,ri)=>ri===r
+        ? row.map((cell,ci)=>ci===c?v:cell)
+        : row
+      )
+    )
+  }
+  const legal = (r:number,c:number) => {
+    if (!board) return [] as number[]
+    const ban = new Set<number>()
+    for (let k=0;k<9;k++){
+      board[r][k] && ban.add(board[r][k]!)
+      board[k][c] && ban.add(board[k][c]!)
+    }
+    const br=Math.floor(r/3)*3, bc=Math.floor(c/3)*3
+    for (let i=br;i<br+3;i++) for (let j=bc;j<bc+3;j++)
+      board[i][j] && ban.add(board[i][j]!)
+    return Array.from({length:9},(_,i)=>i+1)
+      .filter(n=>!ban.has(n))
+  }
+  const hint = () => {
+    if (!selected||!initial) return
+    const {r,c} = selected
+    if (initial[r][c]!=null) return
+    const opts = legal(r,c)
+    if (opts.length===1) update(r,c,opts[0])
+    else alert(opts.length?'Multiple':'None')
+  }
+  const reset    = () => initial && setBoard(initial.map(r=>[...r]))
+  const undoMove = () => {
+    if (undo.current.length && board){
+      redo.current.push(board)
+      setBoard(undo.current.pop()!)
+      clickAudio.current.play()
+    }
+  }
+  const redoMove = () => {
+    if (redo.current.length && board){
+      undo.current.push(board)
+      setBoard(redo.current.pop()!)
+      clickAudio.current.play()
+    }
+  }
+
+  /* UI */
   if (loading) return <div className="app">Loading…</div>
   if (error)   return <div className="app">Error: {error}</div>
-  if (!board || !initial) return null
+  if (!board||!initial) return null
 
   return (
     <div className="app">
-      <h1>Sudoku</h1>
-
+      <div className="timer">{fmt(sec)}</div>
       <div className="controls">
-        <button
-          className="btn btn-accent"
-          onClick={() => setBoard(initial.map(r => [...r]))}
-        >
-          Reset
-        </button>
-        <button
-          className="btn btn-ghost"
-          onClick={() => fetchPuzzle()}
-        >
-          New Puzzle
-        </button>
-        <button
-          className="btn btn-ghost"
-          onClick={() => setDark(d => !d)}
-        >
-          {dark ? 'Light ☀️' : 'Dark 🌙'}
-        </button>
+        <button onClick={undoMove} disabled={!undo.current.length}>↺</button>
+        <button onClick={hint}>💡</button>
+        <button onClick={reset}>🔄</button>
+        <button onClick={()=>fetchPuzzle(diff)}>🎲</button>
+        <button onClick={()=>setDark(d=>!d)}>🌙</button>
       </div>
-
       <div className="board">
-        {board.map((row, r) =>
-          row.map((cell, c) => {
-            const key = `${r}-${c}`
-            const isInitial = initial[r][c] != null
-            const isSelected = selected?.r === r && selected?.c === c
-            const inRow = selected?.r === r
-            const inCol = selected?.c === c
-            const inBox =
-              selected &&
-              Math.floor(selected.r / 3) === Math.floor(r / 3) &&
-              Math.floor(selected.c / 3) === Math.floor(c / 3)
-            const inConflict = conflicts.has(key)
-
-            const classes = [
+        {board.map((row,r)=>
+          row.map((cell,c)=>{
+            const k = `${r}-${c}`
+            const init = initial[r][c]!=null
+            const sel  = selected?.r===r&&selected?.c===c
+            const inR  = selected?.r===r
+            const inC  = selected?.c===c
+            const inB  = selected &&
+              Math.floor(selected.r/3)===Math.floor(r/3)&&
+              Math.floor(selected.c/3)===Math.floor(c/3)
+            const conf = conflicts.has(k)
+            const cls = [
               'cell',
-              isInitial && 'initial',
-              isSelected && 'selected',
-              (inRow || inCol || inBox) && !isSelected && 'related',
-              inConflict && 'conflict',
-            ]
-              .filter(Boolean)
-              .join(' ')
-
+              init    && 'initial',
+              sel     && 'selected',
+              (inR||inC||inB)&&!sel&&'related',
+              conf    && 'conflict'
+            ].filter(Boolean).join(' ')
             return (
               <div
-                key={key}
-                className={classes}
-                onClick={() => !isInitial && setSelected({ r, c })}
-              >
-                {cell}
-              </div>
+                key={k}
+                className={cls}
+                onClick={()=>!init&&(setSelected({r,c}),clickAudio.current.play())}
+              >{cell}</div>
             )
           })
         )}
       </div>
-
       <div className="numpad">
-        {[1,2,3,4,5,6,7,8,9].map(n => (
-          <button
-            key={n}
-            className="btn btn-ghost"
-            onClick={() => handleNumberClick(n)}
-          >
+        {[1,2,3,4,5,6,7,8,9].map(n=>(
+          <button key={n} onClick={()=>selected&&update(selected.r,selected.c,n)}>
             {n}
           </button>
         ))}
-        <button
-          className="btn btn-ghost"
-          onClick={() => handleNumberClick(null)}
-        >
-          X
-        </button>
+        <button onClick={()=>selected&&update(selected.r,selected.c,null)}>X</button>
       </div>
     </div>
   )
