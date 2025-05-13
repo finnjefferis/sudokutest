@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 
 type Cell = number | null
 type Board = Cell[][]
@@ -6,16 +6,12 @@ type Pos = { r: number; c: number } | null
 type Difficulty = 'easy' | 'medium' | 'hard'
 
 const PUZZLES: Record<Difficulty, Board[]> = {
-  easy: [[[5,3,null,null,7,null,null,null,null],
-          [6,null,null,1,9,5,null,null,null],
-          [null,9,8,null,null,null,null,6,null],
-          [8,null,null,null,6,null,null,null,3],
-          [4,null,null,8,null,3,null,null,1],
-          [7,null,null,null,2,null,null,null,6],
-          [null,6,null,null,null,null,2,8,null],
-          [null,null,null,4,1,9,null,null,5],
-          [null,null,null,null,8,null,null,7,9]]]
+  easy:   [/* existing board */],
+  medium: [Array(9).fill(null).map(() => Array(9).fill(null))],
+  hard:   [Array(9).fill(null).map(() => Array(9).fill(null))],
 }
+
+
 
 const STORAGE_DARK = 'sudoku-dark'
 
