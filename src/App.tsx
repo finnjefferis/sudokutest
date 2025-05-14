@@ -25,6 +25,11 @@ export default function App() {
   const [error,setError]      = useState<string|null>(null)
   const [diff,setDiff]        = useState<Diff>('Easy')
   const [hintOptions,setHintOptions] = useState<number[]|null>(null)
+  const [showStats, setShowStats] = useState(false)
+const [hintsUsed, setHintsUsed] = useState(0)
+const [showConfetti, setShowConfetti] = useState(false)
+
+
 
   /* timer */
   const [sec, setSec] = useState(0)
@@ -50,6 +55,9 @@ export default function App() {
   /* fetch puzzle */
   const fetchPuzzle = useCallback(async (d: Diff) => {
     setLoading(true); setError(null)
+    setShowConfetti(false);   
+setShowStats(false);   
+
     try {
       const res = await fetch(`https://sudoku-api.vercel.app/api/dosuku?difficulty=${d}`)
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
@@ -70,8 +78,6 @@ export default function App() {
   }, [])
 
   useEffect(() => { fetchPuzzle(diff) }, [diff, fetchPuzzle])
-
-  /* conflict + win */
   useEffect(() => {
     if (!board) return
     const s = new Set<string>()
@@ -81,14 +87,18 @@ export default function App() {
         if (k !== j && board[i][k] === v) s.add(`${i}-${j}`)
         if (k !== i && board[k][j] === v) s.add(`${i}-${j}`)
       }
-      const br = Math.floor(i/3)*3, bc = Math.floor(j/3)*3
-      for (let r = br; r < br+3; r++) for (let c = bc; c < bc+3; c++)
-        if ((r!==i||c!==j) && board[r][c]===v) s.add(`${i}-${j}`)
+      const br = Math.floor(i / 3) * 3, bc = Math.floor(j / 3) * 3
+      for (let r = br; r < br + 3; r++) for (let c = bc; c < bc + 3; c++)
+        if ((r !== i || c !== j) && board[r][c] === v) s.add(`${i}-${j}`)
     }
     setConflicts(s)
   
+    if (s.size === 0 && board.every(row => row.every(cell => cell !== null))) {
+      setShowConfetti(true)
+      setTimeout(() => setShowStats(true), 2000) 
+    }
   }, [board])
-
+  
   /* helpers */
   const update = (r: number, c: number, v: Cell) => {
     if (!board||!initial) return
@@ -113,9 +123,11 @@ export default function App() {
     const { r, c } = selected
     if (initial[r][c] != null) return
     const opts = legal(r,c)
+    setHintsUsed(h => h + 1)
     if (opts.length === 1) update(r,c,opts[0])
     else setHintOptions(opts)
   }
+  
 
   const reset = () => initial && setBoard(initial.map(r => [...r]))
   const undoMove = () => {
@@ -126,11 +138,29 @@ export default function App() {
     }
   }
 
+
+  
   /* UI */
   if (loading) return <div className="app">Loading…</div>
   if (error)   return <div className="app">Error: {error}</div>
   if (!board||!initial) return null
-
+  if (showStats) {
+    return (
+      <div className="app stats-screen">
+        <h1>🎉 Puzzle Complete!</h1>
+        <p>Time: {fmt(sec)}</p>
+        <p>Hints Used: {hintsUsed}</p>
+        <button onClick={() => {
+          setShowStats(false)
+          setHintsUsed(0)
+          fetchPuzzle(diff)
+        }}>New Puzzle</button>
+      </div>
+    )
+  }
+ 
+  
+  
   return (
     <div className="app">
       <div className="timer">{fmt(sec)}</div>
@@ -138,10 +168,39 @@ export default function App() {
         <button onClick={undoMove} disabled={!undo.current.length}>↺</button>
         <button onClick={hint}>💡</button>
         <button onClick={reset}>🔄</button>
+    
         <button onClick={() => fetchPuzzle(diff)}>🎲</button>
         <button onClick={() => setDark(d => !d)}>🌙</button>
       </div>
+      <div className="board-container">
+    
+  {showConfetti && (
+        //CONFETTI ANIMATION
+    Array.from({ length: 80 }).map((_, i) => {
+      const rnd = (min: number, max: number): number =>
+        Math.random() * (max - min) + min;
 
+      const left = `${rnd(0, 100)}%`;
+
+      const width  = rnd(6, 12);
+      const height = width * rnd(1.2, 1.8);
+      const color = `hsl(${rnd(0,360)}, 70%, 60%)`;
+
+      const delay = rnd(0, 1.5) + 's';
+      const duration = rnd(2, 3.5) + 's';
+
+      const style = {
+        left,
+        width:  `${width}px`,
+        height: `${height}px`,
+        backgroundColor: color,
+        animationDelay:    delay,
+        animationDuration: duration,
+      };
+
+      return <div key={i} className="confetti" style={style} />;
+    })
+  )}
       <div className="board">
         {board.map((row,r) =>
           row.map((cell,c) => {
@@ -179,7 +238,8 @@ export default function App() {
           })
         )}
       </div>
-
+    
+      </div>
       {hintOptions && (
         <div className="hint-box">
           <span>Possible values: </span>
