@@ -163,62 +163,55 @@ setShowStats(false);
   
   return (
     <div className="app">
+      {showConfetti &&
+        Array.from({ length: 80 }).map((_, i) => {
+          const rand = (a: number, b: number) => Math.random() * (b - a) + a
+          const size = rand(6, 12)
+          return (
+            <div
+              key={i}
+              className="confetti"
+              style={{
+                left: `${rand(0, 100)}%`,
+                width:  `${size}px`,
+                height: `${size * rand(1.2, 1.8)}px`,
+                backgroundColor: `hsl(${rand(0, 360)},70%,60%)`,
+                animationDelay:    `${rand(0, 1.5)}s`,
+                animationDuration: `${rand(2, 3.5)}s`,
+              }}
+            />
+          )
+        })
+      }
+  
       <div className="timer">{fmt(sec)}</div>
+  
       <div className="controls">
         <button onClick={undoMove} disabled={!undo.current.length}>↺</button>
         <button onClick={hint}>💡</button>
         <button onClick={reset}>🔄</button>
-    
         <button onClick={() => fetchPuzzle(diff)}>🎲</button>
         <button onClick={() => setDark(d => !d)}>🌙</button>
       </div>
-      <div className="board-container">
-    
-  {showConfetti && (
-        //CONFETTI ANIMATION
-    Array.from({ length: 80 }).map((_, i) => {
-      const rnd = (min: number, max: number): number =>
-        Math.random() * (max - min) + min;
-
-      const left = `${rnd(0, 100)}%`;
-
-      const width  = rnd(6, 12);
-      const height = width * rnd(1.2, 1.8);
-      const color = `hsl(${rnd(0,360)}, 70%, 60%)`;
-
-      const delay = rnd(0, 1.5) + 's';
-      const duration = rnd(2, 3.5) + 's';
-
-      const style = {
-        left,
-        width:  `${width}px`,
-        height: `${height}px`,
-        backgroundColor: color,
-        animationDelay:    delay,
-        animationDuration: duration,
-      };
-
-      return <div key={i} className="confetti" style={style} />;
-    })
-  )}
+  
       <div className="board">
-        {board.map((row,r) =>
-          row.map((cell,c) => {
+        {board.map((row, r) =>
+          row.map((cell, c) => {
             const key = `${r}-${c}`
             const init = initial[r][c] != null
-            const sel  = selected?.r===r && selected?.c===c
-            const inR  = selected?.r===r
-            const inC  = selected?.c===c
+            const sel  = selected?.r === r && selected?.c === c
+            const inR  = selected?.r === r
+            const inC  = selected?.c === c
             const inB  = selected &&
-                        Math.floor(selected.r/3)===Math.floor(r/3) &&
-                        Math.floor(selected.c/3)===Math.floor(c/3)
+                         Math.floor(selected.r / 3) === Math.floor(r / 3) &&
+                         Math.floor(selected.c / 3) === Math.floor(c / 3)
             const conf = conflicts.has(key)
-            const cls  = [
+            const cls = [
               'cell',
               init && 'initial',
               sel  && 'selected',
-              (inR||inC||inB) && !sel && 'related',
-              conf && 'conflict'
+              (inR || inC || inB) && !sel && 'related',
+              conf && 'conflict',
             ].filter(Boolean).join(' ')
             return (
               <div
@@ -226,8 +219,7 @@ setShowStats(false);
                 className={cls}
                 onClick={() => {
                   if (!init) {
-              
-                    setSelected({r,c})
+                    setSelected({ r, c })
                     setHintOptions(null)
                   }
                 }}
@@ -238,29 +230,27 @@ setShowStats(false);
           })
         )}
       </div>
-    
-      </div>
+  
       {hintOptions && (
         <div className="hint-box">
           <span>Possible values: </span>
           <span className="hint-values">{hintOptions.join(' ')}</span>
         </div>
       )}
-
+  
       <div className="numpad">
         {[1,2,3,4,5,6,7,8,9].map(n => (
           <button key={n} onClick={() => {
             setHintOptions(null)
-            selected && update(selected.r,selected.c,n)
-          }}>
-            {n}
-          </button>
+            selected && update(selected.r, selected.c, n)
+          }}>{n}</button>
         ))}
         <button onClick={() => {
           setHintOptions(null)
-          selected && update(selected.r,selected.c,null)
+          selected && update(selected.r, selected.c, null)
         }}>X</button>
       </div>
     </div>
   )
+  
 }

@@ -56,9 +56,13 @@ html, body, #root {
 }
 
 /* ─── Controls ──────────────────────────────────────────────────────── */
-.controls {
-  display: flex; gap: .5rem; flex-wrap: wrap;
+.controls{
+  display:flex;
+  gap:.5rem;
+  flex-wrap:wrap;
+  justify-content:center;
 }
+
 .controls button {
   background: none;
   border: none;
